@@ -19,20 +19,6 @@ func main() {
 	// 使用WaitGroup来跟踪所有后台任务
 	var wg sync.WaitGroup
 
-	// 启动后台任务
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		doBackgroundTask(ctx)
-	}()
-
-	// 启动文件服务器
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		startFileServer(ctx)
-	}()
-
 	// 启动网络服务
 	wg.Add(1)
 	go func() {
@@ -59,23 +45,6 @@ func main() {
 	log.Println("Graceful shutdown completed.")
 }
 
-func doBackgroundTask(ctx context.Context) {
-	for {
-		select {
-		case <-ctx.Done():
-			log.Println("Background task received cancel signal. Cleaning up...")
-			// 进行后台任务的清理操作
-			// ...
-			log.Println("Background task cleaned up.")
-			return
-		default:
-			// 后台任务的工作逻辑
-			// ...
-			time.Sleep(1 * time.Second)
-		}
-	}
-}
-
 // CustomHandler 是一个实现了 http.Handler 接口的自定义处理器
 type CustomHandler struct {
 	Message string
@@ -85,7 +54,7 @@ type CustomHandler struct {
 func (h *CustomHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	m := 120
 	fmt.Fprintf(w, "CustomHandler says: %s\n", h.Message)
-	fmt.Fprintf(w, "start wait %v seconds\n", m)
+	fmt.Fprintf(w, "等待start wait %v seconds\n", m)
 	w.(http.Flusher).Flush()
 	breakflag := false
 	for i := 0; i < m; i++ {
@@ -139,39 +108,5 @@ func startHTTPServer(ctx context.Context) {
 			log.Printf("HTTP server shutdown error: %v", err)
 		}
 		log.Println("HTTP server shut down.")
-	}
-}
-
-func startFileServer(ctx context.Context) {
-	fs := http.FileServer(http.Dir("./static"))
-
-	// 创建一个路由器，并将文件服务器注册到根路径
-	mux := http.NewServeMux()
-	mux.Handle("/", fs)
-
-	fileServer := http.Server{
-		Addr:    ":8081",
-		Handler: mux,
-	}
-
-	// 启动文件服务器
-	go func() {
-		log.Println("File server started.")
-		err := fileServer.ListenAndServe()
-		if err != nil && err != http.ErrServerClosed {
-			log.Fatalf("File server error: %v", err)
-		}
-	}()
-
-	// 等待终止信号或接收到取消信号
-	select {
-	case <-ctx.Done():
-		log.Println("File server received cancel signal. Shutting down...")
-		// 关闭文件服务器
-		err := fileServer.Shutdown(context.Background())
-		if err != nil {
-			log.Printf("File server shutdown error: %v", err)
-		}
-		log.Println("File server shut down.")
 	}
 }
