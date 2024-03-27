@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: grace-app
+  name: grace-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: grace-app
+  template:
+    metadata:
+      labels:
+        app: grace-app
+    spec:
+      containers:
+      - image: mygrace:0.1
+        imagePullPolicy: IfNotPresent
+        name: grace-app
+        env:
+        - name: PASSWD
+          value: my123456
+        ports:
+        - name: http
+          containerPort: 80
+          protocol: TCP
+        - name: file
+          containerPort: 8081
+          protocol: TCP
+      terminationGracePeriodSeconds: 400 # 优雅退出时间,默认为30秒
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: grace-app
+  name: grace-app
+spec:
+  ports:
+  - name: http
+    port: 80
+    protocol: TCP
+    nodePort: 30579
+  selector:
+    app: grace-app
+  type: NodePort
+---
